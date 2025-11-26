@@ -1,9 +1,10 @@
+import { createHytaleRigFromBB } from '../data/rigData.js';
+
 /**
  * 3D Viewer - Renders the Hytale character model using Three.js
  */
 export class Viewer3D {
-  constructor(textureCanvas, rigData, containerId = 'viewer-3d') {
-    this.rigData = rigData;
+  constructor(textureCanvas, containerId = 'viewer-3d') {
     this.container = document.getElementById(containerId);
 
     // Scene setup
@@ -43,20 +44,9 @@ export class Viewer3D {
     this.texture.minFilter = THREE.NearestFilter;
     this.texture.flipY = false;
 
-    // Material setup
-    this.material = new THREE.MeshStandardMaterial({
-      map: this.texture,
-      roughness: 0.6,
-      metalness: 0.1,
-      transparent: true,
-      alphaTest: 0.05
-    });
-
     // Rig group
-    this.rigGroup = new THREE.Group();
+    this.rigGroup = createHytaleRigFromBB(this.texture);
     this.scene.add(this.rigGroup);
-
-    this.buildRig();
 
     // Animation
     this.isSpinning = false;
@@ -64,56 +54,6 @@ export class Viewer3D {
     requestAnimationFrame(this.animate);
 
     window.addEventListener('resize', () => this.onResize());
-  }
-
-  /**
-   * Build the character rig
-   */
-  buildRig() {
-    this.rigData.parts.forEach((part) => {
-      this.createPart(part);
-    });
-  }
-
-  /**
-   * Create a single rig part
-   */
-  createPart(data) {
-    const w = data.size[0] || 0.01;
-    const h = data.size[1] || 0.01;
-    const d = data.size[2] || 0.01;
-
-    const geometry = new THREE.BoxGeometry(w, h, d);
-    const uvAttr = geometry.attributes.uv;
-
-    const setUV = (faceIdx, uvArray) => {
-      const [uMin, vMin, uMax, vMax] = uvArray;
-
-      const u0 = uMin / this.rigData.resolution;
-      const u1 = uMax / this.rigData.resolution;
-      const v0 = 1 - vMax / this.rigData.resolution;
-      const v1 = 1 - vMin / this.rigData.resolution;
-
-      const o = faceIdx * 4;
-      uvAttr.setXY(o + 0, u0, v1);
-      uvAttr.setXY(o + 1, u1, v1);
-      uvAttr.setXY(o + 2, u0, v0);
-      uvAttr.setXY(o + 3, u1, v0);
-    };
-
-    // Map faces correctly
-    setUV(0, data.faces.east);
-    setUV(1, data.faces.west);
-    setUV(2, data.faces.up);
-    setUV(3, data.faces.down);
-    setUV(4, data.faces.south);
-    setUV(5, data.faces.north);
-
-    geometry.attributes.uv.needsUpdate = true;
-
-    const mesh = new THREE.Mesh(geometry, this.material);
-    mesh.position.set(data.pos[0], data.pos[1], data.pos[2]);
-    this.rigGroup.add(mesh);
   }
 
   /**
