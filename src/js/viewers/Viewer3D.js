@@ -38,15 +38,8 @@ export class Viewer3D {
     this.controls.dampingFactor = 0.1;
     this.controls.target.set(0, 45, 0);
 
-    // Texture setup
-    this.texture = new THREE.CanvasTexture(textureCanvas);
-    this.texture.magFilter = THREE.NearestFilter;
-    this.texture.minFilter = THREE.NearestFilter;
-    this.texture.flipY = false;
-
-    // Rig group
-    this.rigGroup = createHytaleRigFromBB(this.texture);
-    this.scene.add(this.rigGroup);
+    // Rig + texture
+    this.initModel(textureCanvas);
 
     // Animation
     this.isSpinning = false;
@@ -57,11 +50,28 @@ export class Viewer3D {
   }
 
   /**
+   * Setup rig and texture using the composite canvas
+   */
+  initModel(textureCanvas) {
+    const canvas = textureCanvas || window?.app?.layers?.compositeCanvas;
+    if (!canvas) return;
+
+    this.texture = new THREE.CanvasTexture(canvas);
+    this.texture.magFilter = THREE.NearestFilter;
+    this.texture.minFilter = THREE.NearestFilter;
+    this.texture.flipY = false;
+
+    this.rigGroup = createHytaleRigFromBB(this.texture);
+    this.scene.add(this.rigGroup);
+  }
+
+  /**
    * Update texture from canvas
    */
-  updateTexture(canvas) {
-    this.texture.image = canvas;
-    this.texture.needsUpdate = true;
+  updateTexture() {
+    if (this.texture) {
+      this.texture.needsUpdate = true;
+    }
   }
 
   /**
