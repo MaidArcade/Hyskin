@@ -118,6 +118,9 @@ export class Viewer3D {
   handlePointerDown(event) {
     if (!this.app?.state.paintOn3D) return;
     this.isPainting3D = true;
+    if (this.controls) {
+      this.controls.enabled = false;
+    }
     this.handlePaintOnModel(event);
   }
 
@@ -141,6 +144,9 @@ export class Viewer3D {
   endPaintStroke() {
     if (this.isPainting3D) {
       this.isPainting3D = false;
+      if (this.controls) {
+        this.controls.enabled = true;
+      }
       this.app?.history?.save();
     }
   }
