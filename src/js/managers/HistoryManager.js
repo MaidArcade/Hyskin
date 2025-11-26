@@ -6,7 +6,7 @@ export class HistoryManager {
     this.app = app;
     this.stack = [];
     this.pointer = -1;
-    this.limit = 20;
+    this.limit = app?.config?.HISTORY_LIMIT || 20;
   }
 
   /**
@@ -34,10 +34,11 @@ export class HistoryManager {
 
     // Maintain history limit
     if (this.stack.length > this.limit) {
-      this.stack.shift();
-    } else {
-      this.pointer++;
+      const overflow = this.stack.length - this.limit;
+      this.stack.splice(0, overflow);
     }
+
+    this.pointer = this.stack.length - 1;
   }
 
   /**
