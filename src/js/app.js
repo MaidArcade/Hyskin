@@ -24,7 +24,7 @@ export class App {
     // Initialize editors on next frame to ensure DOM is ready
     requestAnimationFrame(() => {
       this.editor = new Editor2D(this, CONFIG);
-      this.viewer = new Viewer3D(this.layers.compositeCanvas, 'viewer-3d');
+      this.viewer = new Viewer3D(this.layers.compositeCanvas, 'viewer-3d', this);
 
       // Load default texture if available
       const img = new Image();

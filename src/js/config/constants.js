@@ -4,7 +4,7 @@
 export const CONFIG = {
   TEXTURE_SIZE: 256,
   DEFAULT_TEXTURE_URL: '/assets/default-skin.png',
-  BRUSH_MAX_SIZE: 10,
+  BRUSH_MAX_SIZE: 32,
   HISTORY_LIMIT: 20,
   ZOOM_MIN: 0.5,
   ZOOM_MAX: 4.0,
@@ -18,11 +18,15 @@ export const getInitialState = () => ({
   tool: 'brush',
   color: '#ff0000',
   brushSize: 1,
+  brushOpacity: 1,
+  brushType: 'square',
   isDrawing: false,
   mirrorMode: false,
   zoom: 1.0,
   activeLayerId: 0,
-  layerCounter: 0
+  layerCounter: 0,
+  paintOn3D: false,
+  viewMode: '2d'
 });
 
 /**

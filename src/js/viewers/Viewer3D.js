@@ -4,7 +4,8 @@ import { createHytaleRigFromBB } from '../data/rigData.js';
  * 3D Viewer - Renders the Hytale character model using Three.js
  */
 export class Viewer3D {
-  constructor(textureCanvas, containerId = 'viewer-3d') {
+  constructor(textureCanvas, containerId = 'viewer-3d', app = null) {
+    this.app = app;
     this.container = document.getElementById(containerId);
 
     // Scene setup
@@ -41,6 +42,16 @@ export class Viewer3D {
     // Rig + texture
     this.initModel(textureCanvas);
 
+    // Painting helpers
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.isPainting3D = false;
+    this.renderer.domElement.addEventListener('mousedown', (e) => this.handlePointerDown(e));
+    window.addEventListener('mouseup', () => this.endPaintStroke());
+    this.renderer.domElement.addEventListener('mousemove', (e) => {
+      if (this.isPainting3D) this.handlePaintOnModel(e);
+    });
+
     // Animation
     this.isSpinning = false;
     this.animate = this.animate.bind(this);
@@ -66,11 +77,71 @@ export class Viewer3D {
   }
 
   /**
+   * Toggle edge helpers to create a paint-friendly grid
+   */
+  togglePaintGrid() {
+    if (!this.rigGroup) return;
+    if (this.paintGridGroup) {
+      this.scene.remove(this.paintGridGroup);
+      this.paintGridGroup = null;
+      return;
+    }
+
+    const group = new THREE.Group();
+    this.rigGroup.children.forEach((mesh) => {
+      const edges = new THREE.EdgesGeometry(mesh.geometry);
+      const line = new THREE.LineSegments(
+        edges,
+        new THREE.LineBasicMaterial({ color: 0x94a3b8, linewidth: 1, transparent: true, opacity: 0.35 })
+      );
+      line.position.copy(mesh.position);
+      line.rotation.copy(mesh.rotation);
+      group.add(line);
+    });
+
+    this.paintGridGroup = group;
+    this.scene.add(group);
+  }
+
+  /**
    * Update texture from canvas
    */
   updateTexture() {
     if (this.texture) {
       this.texture.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Handle pointer down for 3D paint mode
+   */
+  handlePointerDown(event) {
+    if (!this.app?.state.paintOn3D) return;
+    this.isPainting3D = true;
+    this.handlePaintOnModel(event);
+  }
+
+  handlePaintOnModel(event) {
+    if (!this.app?.editor || !this.rigGroup) return;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.rigGroup.children, true);
+    if (!intersects.length || !intersects[0].uv) return;
+
+    const uv = intersects[0].uv;
+    const canvas = this.app.layers.compositeCanvas;
+    const x = Math.floor(uv.x * canvas.width);
+    const y = Math.floor((1 - uv.y) * canvas.height);
+    this.app.editor.paintAt(x, y, { commitHistory: false });
+  }
+
+  endPaintStroke() {
+    if (this.isPainting3D) {
+      this.isPainting3D = false;
+      this.app?.history?.save();
     }
   }
 
