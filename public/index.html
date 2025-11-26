@@ -1,399 +1,1172 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor de Skins Hytale - Rig Oficial + IA</title>
-
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- FontAwesome -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
     <!-- OrbitControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-    <!-- Markdown Parser -->
+    <!-- Markdown Parser (for AI responses) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/styles.css" />
-  </head>
+    <style>
+        :root {
+            --primary: #6366f1; /* Indigo 500 */
+            --bg-panel: #ffffff;
+            --bg-canvas: #e2e8f0;
+        }
 
-  <body class="h-screen flex flex-col text-slate-700">
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* App layout */
+        }
+
+        /* Checkerboard Pattern for Transparent Backgrounds */
+        .checkerboard {
+            background-color: #ffffff;
+            background-image: 
+                linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #ccc 75%), 
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Tool Button Active State */
+        .tool-btn.active {
+            background-color: #e0e7ff;
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        canvas { image-rendering: pixelated; }
+
+        /* AI Sparkle Animation */
+        @keyframes sparkle {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .sparkle-icon {
+            animation: sparkle 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-slate-700">
+
     <!-- Header -->
-    <nav
-      class="h-14 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 z-20 shadow-sm"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold shadow-sm"
-        >
-          H
+    <nav class="h-14 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 z-20 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">H</div>
+            <h1 class="font-bold text-lg tracking-tight">Hytale<span class="text-indigo-500">SkinForge</span></h1>
         </div>
-        <h1 class="font-bold text-lg tracking-tight">
-          Hytale<span class="text-indigo-500">SkinForge</span>
-        </h1>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <!-- AI Button -->
-        <button
-          onclick="app.ai.toggleModal()"
-          class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2 border border-transparent"
-        >
-          <i class="fas fa-magic sparkle-icon"></i> Asistente IA
-        </button>
-
-        <div class="w-px h-6 bg-slate-200 mx-1"></div>
-
-        <button
-          onclick="app.ui.newFile()"
-          class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition"
-        >
-          Nuevo
-        </button>
-
-        <div class="relative group">
-          <button
-            class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition"
-          >
-            Archivo
-          </button>
-
-          <!-- Dropdown -->
-          <div
-            class="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg hidden group-hover:block py-1 z-50"
-          >
-            <label
-              for="file-upload"
-              class="block px-4 py-2 text-sm hover:bg-indigo-50 cursor-pointer"
-            >
-              Abrir Skin (PNG)
-            </label>
-            <button
-              onclick="app.exportSkin()"
-              class="block w-full text-left px-4 py-2 text-sm hover:bg-indigo-50"
-            >
-              Exportar (PNG)
+        <div class="flex items-center gap-3">
+             <!-- AI Button -->
+             <button onclick="app.ai.toggleModal()" class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2 border border-transparent">
+                <i class="fas fa-magic sparkle-icon"></i> Asistente IA
             </button>
-          </div>
+            <div class="w-px h-6 bg-slate-200 mx-1"></div>
+            <button onclick="app.ui.newFile()" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition">Nuevo</button>
+            <div class="relative group">
+                <button class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition">Archivo</button>
+                <!-- Dropdown -->
+                <div class="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg hidden group-hover:block py-1 z-50">
+                    <label for="file-upload" class="block px-4 py-2 text-sm hover:bg-indigo-50 cursor-pointer">Abrir Skin (PNG)</label>
+                    <button onclick="app.exportSkin()" class="block w-full text-left px-4 py-2 text-sm hover:bg-indigo-50">Exportar (PNG)</button>
+                </div>
+            </div>
+            <button onclick="app.saveToCloud()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2">
+                <i class="fas fa-cloud-upload-alt"></i> Guardar
+            </button>
         </div>
-
-        <button
-          onclick="app.saveToCloud()"
-          class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2"
-        >
-          <i class="fas fa-cloud-upload-alt"></i> Guardar
-        </button>
-      </div>
     </nav>
 
     <!-- Main Layout -->
     <div class="flex-1 flex overflow-hidden">
-      <!-- Left Toolbar -->
-      <aside
-        class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 gap-4 shrink-0 z-10"
-      >
-        <!-- Tools -->
-        <div class="flex flex-col gap-2 w-full px-2">
-          <button
-            id="tool-brush"
-            class="tool-btn active aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
-            title="Pincel (B)"
-          >
-            <i class="fas fa-paint-brush"></i>
-            <span class="text-[9px] uppercase font-bold">Pintar</span>
-          </button>
-
-          <button
-            id="tool-eraser"
-            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
-            title="Borrador (E)"
-          >
-            <i class="fas fa-eraser"></i>
-            <span class="text-[9px] uppercase font-bold">Borrar</span>
-          </button>
-
-          <button
-            id="tool-fill"
-            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
-            title="Cubo (F)"
-          >
-            <i class="fas fa-fill-drip"></i>
-            <span class="text-[9px] uppercase font-bold">Rellenar</span>
-          </button>
-
-          <button
-            id="tool-picker"
-            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
-            title="Gotero (P)"
-          >
-            <i class="fas fa-eye-dropper"></i>
-            <span class="text-[9px] uppercase font-bold">Color</span>
-          </button>
-        </div>
-
-        <div class="w-10 h-px bg-slate-200"></div>
-
-        <!-- Colors -->
-        <div class="flex flex-col gap-2 items-center w-full">
-          <div class="relative group">
-            <input
-              type="color"
-              id="main-color"
-              value="#ff0000"
-              class="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-sm p-0 overflow-hidden"
-            />
-          </div>
-
-          <!-- Palette Grid -->
-          <div id="palette-grid" class="grid grid-cols-2 gap-1 p-1">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <div class="mt-auto flex flex-col gap-2 w-full px-2 pb-2">
-          <button
-            onclick="window.app.history.undo()"
-            class="w-full py-2 rounded hover:bg-slate-100 text-slate-500"
-            title="Deshacer (Ctrl+Z)"
-          >
-            <i class="fas fa-undo"></i>
-          </button>
-          <button
-            onclick="window.app.history.redo()"
-            class="w-full py-2 rounded hover:bg-slate-100 text-slate-500"
-            title="Rehacer (Ctrl+Y)"
-          >
-            <i class="fas fa-redo"></i>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Center Canvas Area -->
-      <main class="flex-1 flex flex-col bg-slate-100 relative min-w-0">
-        <!-- Top Bar -->
-        <div class="h-10 bg-white border-b border-slate-200 flex items-center px-4 gap-4 shrink-0">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase">Tamaño</span>
-            <input
-              type="range"
-              id="brush-size"
-              min="1"
-              max="10"
-              value="1"
-              class="w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-            />
-            <span id="brush-size-val" class="text-xs font-mono w-4">1</span>
-          </div>
-
-          <div class="w-px h-4 bg-slate-200"></div>
-
-          <button
-            id="mirror-mode"
-            class="flex items-center gap-2 px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-indigo-50 transition"
-          >
-            <i class="fas fa-arrows-alt-h"></i> Espejo
-          </button>
-
-          <div class="flex-1"></div>
-
-          <div class="flex items-center gap-2">
-            <button
-              onclick="window.app.editor.zoom(-0.1)"
-              class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"
-            >
-              <i class="fas fa-minus text-xs"></i>
-            </button>
-            <span id="zoom-level" class="text-xs font-mono">100%</span>
-            <button
-              onclick="window.app.editor.zoom(0.1)"
-              class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"
-            >
-              <i class="fas fa-plus text-xs"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Canvas Container -->
-        <div
-          id="editor-container"
-          class="flex-1 overflow-auto flex items-center justify-center p-8 relative"
-        >
-          <div class="relative shadow-2xl checkerboard" id="canvas-wrapper">
-            <!-- Canvases injected here -->
-          </div>
-
-          <!-- Drag Overlay -->
-          <div
-            id="drop-zone"
-            class="absolute inset-4 bg-indigo-500/10 border-2 border-dashed border-indigo-500 rounded-xl flex items-center justify-center hidden z-50 backdrop-blur-sm"
-          >
-            <div class="bg-white px-6 py-4 rounded-lg shadow-xl text-indigo-600 font-bold animate-bounce">
-              <i class="fas fa-file-import mr-2"></i> Suelta tu Skin aquí
-            </div>
-          </div>
-
-          <!-- AI Modal (Hidden by default) -->
-          <div
-            id="ai-modal"
-            class="absolute top-4 right-4 w-80 bg-white rounded-xl shadow-2xl border border-purple-100 hidden z-40 flex flex-col overflow-hidden"
-          >
-            <div
-              class="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 flex justify-between items-center text-white"
-            >
-              <h3 class="font-bold text-sm flex items-center gap-2">
-                <i class="fas fa-robot"></i> Asistente Creativo
-              </h3>
-              <button
-                onclick="app.ai.toggleModal()"
-                class="hover:bg-white/20 rounded p-1"
-              >
-                <i class="fas fa-times"></i>
-              </button>
+        
+        <!-- Left Toolbar -->
+        <aside class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 gap-4 shrink-0 z-10">
+            <!-- Tools -->
+            <div class="flex flex-col gap-2 w-full px-2">
+                <button id="tool-brush" class="tool-btn active aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition" title="Pincel (B)">
+                    <i class="fas fa-paint-brush"></i>
+                    <span class="text-[9px] uppercase font-bold">Pintar</span>
+                </button>
+                <button id="tool-eraser" class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition" title="Borrador (E)">
+                    <i class="fas fa-eraser"></i>
+                    <span class="text-[9px] uppercase font-bold">Borrar</span>
+                </button>
+                <button id="tool-fill" class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition" title="Cubo (F)">
+                    <i class="fas fa-fill-drip"></i>
+                    <span class="text-[9px] uppercase font-bold">Rellenar</span>
+                </button>
+                <button id="tool-picker" class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition" title="Gotero (P)">
+                    <i class="fas fa-eye-dropper"></i>
+                    <span class="text-[9px] uppercase font-bold">Color</span>
+                </button>
             </div>
 
-            <div class="p-4 bg-slate-50 border-b border-slate-200">
-              <div class="flex gap-2 mb-4 text-xs">
-                <button
-                  onclick="app.ai.setTab('palette')"
-                  id="tab-palette"
-                  class="flex-1 py-1.5 px-3 rounded-md bg-white border border-slate-200 font-medium shadow-sm text-purple-600"
-                >
-                  Paletas
-                </button>
-                <button
-                  onclick="app.ai.setTab('critic')"
-                  id="tab-critic"
-                  class="flex-1 py-1.5 px-3 rounded-md text-slate-500 hover:bg-white hover:shadow-sm transition"
-                >
-                  Análisis
-                </button>
-              </div>
+            <div class="w-10 h-px bg-slate-200"></div>
 
-              <!-- Palette Gen -->
-              <div id="panel-palette">
-                <label class="block text-xs font-bold text-slate-500 mb-1"
-                  >Tema de la Skin</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="palette-prompt"
-                    placeholder="Ej: Caballero de Hielo, Zombi..."
-                    class="flex-1 text-sm border border-slate-300 rounded p-1.5 focus:outline-none focus:border-purple-500"
-                  />
-                  <button
-                    onclick="app.ai.generatePalette()"
-                    class="bg-purple-500 hover:bg-purple-600 text-white p-1.5 rounded shadow-sm transition w-8 flex items-center justify-center"
-                  >
-                    <i class="fas fa-arrow-right"></i>
-                  </button>
+            <!-- Colors -->
+            <div class="flex flex-col gap-2 items-center w-full">
+                <div class="relative group">
+                    <input type="color" id="main-color" value="#ff0000" class="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-sm p-0 overflow-hidden">
                 </div>
-                <p class="text-[10px] text-slate-400 mt-2">
-                  Gemini generará 6 colores armónicos.
-                </p>
-              </div>
+                <!-- Palette Grid -->
+                <div id="palette-grid" class="grid grid-cols-2 gap-1 p-1">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="mt-auto flex flex-col gap-2 w-full px-2 pb-2">
+                <button onclick="window.app.history.undo()" class="w-full py-2 rounded hover:bg-slate-100 text-slate-500" title="Deshacer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button onclick="window.app.history.redo()" class="w-full py-2 rounded hover:bg-slate-100 text-slate-500" title="Rehacer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            </div>
+        </aside>
 
-              <!-- Critic -->
-              <div id="panel-critic" class="hidden">
-                <p class="text-xs text-slate-600 mb-3">
-                  Gemini analizará tu textura actual (visual) y te dará consejos de mejora.
-                </p>
-                <button
-                  onclick="app.ai.analyzeSkin()"
-                  class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded text-sm font-medium shadow-sm transition flex items-center justify-center gap-2"
-                >
-                  <i class="fas fa-eye"></i> Analizar Skin Actual
+        <!-- Center Canvas Area -->
+        <main class="flex-1 flex flex-col bg-slate-100 relative min-w-0">
+            <!-- Top Bar -->
+            <div class="h-10 bg-white border-b border-slate-200 flex items-center px-4 gap-4 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Tamaño</span>
+                    <input type="range" id="brush-size" min="1" max="10" value="1" class="w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    <span id="brush-size-val" class="text-xs font-mono w-4">1</span>
+                </div>
+                <div class="w-px h-4 bg-slate-200"></div>
+                <button id="mirror-mode" class="flex items-center gap-2 px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-indigo-50 transition">
+                    <i class="fas fa-arrows-alt-h"></i> Espejo
                 </button>
-              </div>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.app.editor.zoom(-0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-minus text-xs"></i></button>
+                    <span id="zoom-level" class="text-xs font-mono">100%</span>
+                    <button onclick="window.app.editor.zoom(0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-plus text-xs"></i></button>
+                </div>
             </div>
 
-            <div
-              id="ai-results"
-              class="p-4 text-xs text-slate-600 min-h-[100px] max-h-[200px] overflow-y-auto bg-white"
-            >
-              <div class="text-center text-slate-400 mt-4">Los resultados aparecerán aquí...</div>
+            <!-- Canvas Container -->
+            <div id="editor-container" class="flex-1 overflow-auto flex items-center justify-center p-8 relative">
+                <div class="relative shadow-2xl checkerboard" id="canvas-wrapper">
+                    <!-- Canvases injected here -->
+                </div>
+                
+                <!-- Drag Overlay -->
+                <div id="drop-zone" class="absolute inset-4 bg-indigo-500/10 border-2 border-dashed border-indigo-500 rounded-xl flex items-center justify-center hidden z-50 backdrop-blur-sm">
+                    <div class="bg-white px-6 py-4 rounded-lg shadow-xl text-indigo-600 font-bold animate-bounce">
+                        <i class="fas fa-file-import mr-2"></i> Suelta tu Skin aquí
+                    </div>
+                </div>
+                
+                <!-- AI Modal (Hidden by default) -->
+                <div id="ai-modal" class="absolute top-4 right-4 w-80 bg-white rounded-xl shadow-2xl border border-purple-100 hidden z-40 flex flex-col overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 flex justify-between items-center text-white">
+                        <h3 class="font-bold text-sm flex items-center gap-2"><i class="fas fa-robot"></i> Asistente Creativo</h3>
+                        <button onclick="app.ai.toggleModal()" class="hover:bg-white/20 rounded p-1"><i class="fas fa-times"></i></button>
+                    </div>
+                    
+                    <div class="p-4 bg-slate-50 border-b border-slate-200">
+                        <div class="flex gap-2 mb-4 text-xs">
+                            <button onclick="app.ai.setTab('palette')" id="tab-palette" class="flex-1 py-1.5 px-3 rounded-md bg-white border border-slate-200 font-medium shadow-sm text-purple-600">Paletas</button>
+                            <button onclick="app.ai.setTab('critic')" id="tab-critic" class="flex-1 py-1.5 px-3 rounded-md text-slate-500 hover:bg-white hover:shadow-sm transition">Análisis</button>
+                        </div>
+
+                        <!-- Palette Gen -->
+                        <div id="panel-palette">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Tema de la Skin</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="palette-prompt" placeholder="Ej: Caballero de Hielo, Zombi..." class="flex-1 text-sm border border-slate-300 rounded p-1.5 focus:outline-none focus:border-purple-500">
+                                <button onclick="app.ai.generatePalette()" class="bg-purple-500 hover:bg-purple-600 text-white p-1.5 rounded shadow-sm transition w-8 flex items-center justify-center">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2">Gemini generará 6 colores armónicos.</p>
+                        </div>
+
+                        <!-- Critic -->
+                        <div id="panel-critic" class="hidden">
+                            <p class="text-xs text-slate-600 mb-3">Gemini analizará tu textura actual (visual) y te dará consejos de mejora.</p>
+                            <button onclick="app.ai.analyzeSkin()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded text-sm font-medium shadow-sm transition flex items-center justify-center gap-2">
+                                <i class="fas fa-eye"></i> Analizar Skin Actual
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="ai-results" class="p-4 text-xs text-slate-600 min-h-[100px] max-h-[200px] overflow-y-auto bg-white">
+                        <div class="text-center text-slate-400 mt-4">Los resultados aparecerán aquí...</div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </main>
+        </main>
 
-      <!-- Right Panel: 3D & Layers -->
-      <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
-        <!-- 3D Preview -->
-        <div class="h-[400px] bg-slate-50 relative border-b border-slate-200 group">
-          <div id="viewer-3d" class="absolute inset-0 w-full h-full"></div>
+        <!-- Right Panel: 3D & Layers -->
+        <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
+            
+            <!-- 3D Preview -->
+            <div class="h-[400px] bg-slate-50 relative border-b border-slate-200 group">
+                <div id="viewer-3d" class="absolute inset-0 w-full h-full"></div>
+                
+                <!-- 3D Controls Overlay -->
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button onclick="app.viewer.resetCamera()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Reset Camera"><i class="fas fa-compress"></i></button>
+                    <button onclick="app.viewer.toggleGrid()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Toggle Grid"><i class="fas fa-border-all"></i></button>
+                    <button onclick="app.viewer.toggleSpin()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Auto Rotate"><i class="fas fa-sync"></i></button>
+                </div>
+                
+                <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-white/80 px-2 py-0.5 rounded">3D Preview</div>
+            </div>
 
-          <!-- 3D Controls Overlay -->
-          <div
-            class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          >
-            <button
-              onclick="app.viewer.resetCamera()"
-              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
-              title="Reset Camera"
-            >
-              <i class="fas fa-compress"></i>
-            </button>
-            <button
-              onclick="app.viewer.toggleGrid()"
-              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
-              title="Toggle Grid"
-            >
-              <i class="fas fa-border-all"></i>
-            </button>
-            <button
-              onclick="app.viewer.toggleSpin()"
-              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
-              title="Auto Rotate"
-            >
-              <i class="fas fa-sync"></i>
-            </button>
-          </div>
+            <!-- Layers Panel -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase">Capas</h3>
+                    <button onclick="window.app.layers.addLayer()" class="text-indigo-600 hover:text-indigo-700 text-xs font-bold flex items-center gap-1">
+                        <i class="fas fa-plus"></i> Nueva
+                    </button>
+                </div>
+                <div id="layers-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <!-- Layers injected here -->
+                </div>
+            </div>
+            
+            <!-- Info Bar -->
+            <div class="p-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
+                <span id="status-msg">Listo</span>
+                <span>256x256px</span>
+            </div>
+        </aside>
 
-          <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-white/80 px-2 py-0.5 rounded">
-            3D Preview
-          </div>
-        </div>
-
-        <!-- Layers Panel -->
-        <div class="flex-1 flex flex-col min-h-0">
-          <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-            <h3 class="text-xs font-bold text-slate-500 uppercase">Capas</h3>
-            <button
-              onclick="window.app.layers.addLayer()"
-              class="text-indigo-600 hover:text-indigo-700 text-xs font-bold flex items-center gap-1"
-            >
-              <i class="fas fa-plus"></i> Nueva
-            </button>
-          </div>
-          <div id="layers-list" class="flex-1 overflow-y-auto p-2 space-y-1">
-            <!-- Layers injected here -->
-          </div>
-        </div>
-
-        <!-- Info Bar -->
-        <div
-          class="p-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between"
-        >
-          <span id="status-msg">Listo</span>
-          <span>256x256px</span>
-        </div>
-      </aside>
     </div>
 
-    <input type="file" id="file-upload" class="hidden" accept="image/png" />
+    <input type="file" id="file-upload" class="hidden" accept="image/png">
 
-    <!-- App Script -->
-    <script type="module">
-      import { App } from './js/app.js';
-      window.App = App;
+    <script>
+        // --- 1. HYTALE RIG DATA (EXACT - HyRig3) ---
+        const RIG_DATA = {
+            resolution: 16, // UV grid base (Updated from textureResolution to match createPart logic)
+            
+            parts: [
+                // PELVIS
+                {
+                    name: "Pelvis",
+                    size: [26, 10, 18],
+                    pos: [-1.149, -9.589, 1.05], // Exact position from file
+                    faces: {
+                        north: [8.5, 5.812, 10.125, 6.438],
+                        east: [7.375, 5.812, 8.5, 6.438],
+                        south: [11.25, 5.812, 12.875, 6.438],
+                        west: [10.125, 5.812, 11.25, 6.438],
+                        up: [10.125, 5.812, 8.5, 4.688],
+                        down: [11.75, 4.688, 10.125, 5.812]
+                    }
+                },
+                // BODY
+                {
+                    name: "Body",
+                    size: [26, 14, 18],
+                    pos: [-1.149, 2.411, 1.05],
+                    faces: {
+                        north: [4.125, 4.875, 5.75, 5.75],
+                        east: [3, 4.875, 4.125, 5.75],
+                        south: [6.875, 4.875, 8.5, 5.75],
+                        west: [5.75, 4.875, 6.875, 5.75],
+                        up: [5.75, 4.875, 4.125, 3.75],
+                        down: [7.375, 3.75, 5.75, 4.875]
+                    }
+                },
+                // CHEST
+                {
+                    name: "Chest",
+                    size: [28, 22, 20],
+                    pos: [-1.149, 20.411, 1.05],
+                    faces: {
+                        north: [8.75, 3.313, 10.5, 4.688],
+                        east: [7.5, 3.313, 8.75, 4.688],
+                        south: [11.75, 3.313, 13.5, 4.688],
+                        west: [10.5, 3.313, 11.75, 4.688],
+                        up: [10.5, 3.313, 8.75, 2.063],
+                        down: [12.25, 2.063, 10.5, 3.313]
+                    }
+                },
+                // NECK
+                {
+                    name: "Neck",
+                    size: [16, 8, 12],
+                    pos: [-1.149, 34.411, 1.05],
+                    faces: {
+                        north: [4.25, 3.375, 5.25, 3.875],
+                        east: [3.5, 3.375, 4.25, 3.875],
+                        south: [6, 3.375, 7, 3.875],
+                        west: [5.25, 3.375, 6, 3.875],
+                        up: [5.25, 3.375, 4.25, 2.625],
+                        down: [6.25, 2.625, 5.25, 3.375]
+                    }
+                },
+                // HEAD
+                {
+                    name: "Head",
+                    size: [28, 28, 28],
+                    pos: [-1.149, 48.411, 0.05],
+                    faces: {
+                        north: [1.938, 2, 3.688, 3.75],
+                        east: [0.188, 2, 1.938, 3.75],
+                        south: [5.438, 2, 7.188, 3.75],
+                        west: [3.688, 2, 5.438, 3.75],
+                        up: [3.688, 2, 1.938, 0.25],
+                        down: [5.438, 0.25, 3.688, 2]
+                    }
+                },
+                // MOUTH
+                {
+                    name: "Mouth",
+                    size: [16, 7, 0.1], // Give it a tiny depth to render
+                    pos: [-1.149, 38.411, -14.05],
+                    faces: {
+                        north: [0.125, 3.813, 1.125, 4.25],
+                        east: [0.125, 6, 0.125, 6.438],
+                        south: [1.125, 6, 2.125, 6.438],
+                        west: [1.125, 6, 1.125, 6.438],
+                        up: [1.125, 6, 0.125, 6],
+                        down: [2.125, 6, 1.125, 6]
+                    }
+                },
+                // HIP LEFT
+                {
+                    name: "Hip_Left",
+                    size: [12, 16, 14],
+                    pos: [-8.149, -21.589, 1.05],
+                    faces: {
+                        north: [9.375, 5.688, 10.125, 6.5],
+                        east: [8.5, 5.688, 9.375, 6.5],
+                        south: [11.25, 5.688, 12, 6.5],
+                        west: [10.125, 5.688, 11.25, 6.5],
+                        up: [10.125, 5.688, 9.375, 4.813],
+                        down: [10.875, 4.813, 10.125, 5.688]
+                    }
+                },
+                // HIP RIGHT
+                {
+                    name: "Hip_Right",
+                    size: [12, 16, 14],
+                    pos: [5.851, -21.589, 1.05],
+                    faces: {
+                        north: [7.625, 5.688, 8.375, 6.5],
+                        east: [6.75, 5.688, 7.625, 6.5],
+                        south: [9.5, 5.688, 10.25, 6.5],
+                        west: [8.375, 5.688, 9.5, 6.5],
+                        up: [8.375, 5.688, 7.625, 4.813],
+                        down: [9.125, 4.813, 8.375, 5.688]
+                    }
+                },
+                // LEG RIGHT (Upper/Hip connection) - Check naming, assuming this is main leg part
+                {
+                    name: "Leg_Right_Upper",
+                    size: [10, 28, 12],
+                    pos: [5.851, -43.589, 1.05],
+                    faces: {
+                        north: [10, 7.188, 10.625, 8.938],
+                        east: [9.25, 7.188, 10, 8.938],
+                        south: [11.375, 7.188, 12, 8.938],
+                        west: [10.625, 7.188, 11.375, 8.938],
+                        up: [10.625, 7.188, 10, 6.438],
+                        down: [11.25, 6.438, 10.625, 7.188]
+                    }
+                },
+                // LEG LEFT (Upper)
+                {
+                    name: "Leg_Left_Upper",
+                    size: [10, 28, 12],
+                    pos: [-8.149, -43.589, 1.05],
+                    faces: {
+                        north: [8.625, 7.188, 9.25, 8.938],
+                        east: [7.875, 7.188, 8.625, 8.938],
+                        south: [10, 7.188, 10.625, 8.938],
+                        west: [9.25, 7.188, 10, 8.938],
+                        up: [9.25, 7.188, 8.625, 6.438],
+                        down: [9.875, 6.438, 9.25, 7.188]
+                    }
+                },
+                // FOOT LEFT
+                {
+                    name: "Foot_Left",
+                    size: [14, 8, 20],
+                    pos: [-12.158, -58.411, 0.054],
+                    faces: {
+                        north: [5.625, 7, 6.5, 7.5],
+                        east: [4.375, 7, 5.625, 7.5],
+                        south: [7.75, 7, 8.625, 7.5],
+                        west: [6.5, 7, 7.75, 7.5],
+                        up: [6.5, 7, 5.625, 5.75],
+                        down: [7.375, 5.75, 6.5, 7]
+                    }
+                },
+                // FOOT RIGHT
+                {
+                    name: "Foot_Right",
+                    size: [14, 8, 20],
+                    pos: [9.86, -58.411, 0.054],
+                    faces: {
+                        north: [4.375, 7, 5.25, 7.5],
+                        east: [3.125, 7, 4.375, 7.5],
+                        south: [6.5, 7, 7.375, 7.5],
+                        west: [5.25, 7, 6.5, 7.5],
+                        up: [5.25, 7, 4.375, 5.75],
+                        down: [6.125, 5.75, 5.25, 7]
+                    }
+                },
+                // ARMS (Derived from Chest attachments in original BB model usually, simplifying to mirror positions if not explicit in snippet, but using provided Chest blocks for arms)
+                // Note: The snippet provided "Chest" blocks that seem to be arms based on dimensions/pos
+                {
+                    name: "Arm_Left",
+                    size: [8, 20, 12],
+                    pos: [-16.146, 20.786, 1.063],
+                    faces: {
+                        north: [14, 2.75, 14.5, 4],
+                        east: [13.5, 2.75, 14, 4],
+                        south: [15, 2.75, 15.5, 4],
+                        west: [14.5, 2.75, 15, 4],
+                        up: [14.5, 2.75, 14, 2.25],
+                        down: [15, 2.25, 14.5, 2.75]
+                    }
+                },
+                {
+                    name: "Arm_Right",
+                    size: [8, 20, 12],
+                    pos: [13.851, 20.411, 1.05],
+                    faces: {
+                        north: [12, 2.75, 12.5, 4],
+                        east: [11.5, 2.75, 12, 4],
+                        south: [13, 2.75, 13.5, 4],
+                        west: [12.5, 2.75, 13, 4],
+                        up: [12.5, 2.75, 12, 2.25],
+                        down: [13, 2.25, 12.5, 2.75]
+                    }
+                },
+                // Forearms / Lower Arms (implied by "Chest" blocks with smaller height)
+                {
+                    name: "Forearm_Right",
+                    size: [8, 16, 12],
+                    pos: [15.126, 4.097, 2.444],
+                    faces: {
+                        north: [12.5, 4.625, 13, 5.625],
+                        east: [12, 4.625, 12.5, 5.625],
+                        south: [13.5, 4.625, 14, 5.625],
+                        west: [13, 4.625, 13.5, 5.625],
+                        up: [13, 4.625, 12.5, 4.125],
+                        down: [13.5, 4.125, 13, 4.625]
+                    }
+                },
+                {
+                    name: "Forearm_Left",
+                    size: [8, 16, 12],
+                    pos: [-17.477, 3.456, 2.446],
+                    faces: {
+                        north: [14, 4.625, 14.5, 5.625],
+                        east: [13.5, 4.625, 14, 5.625],
+                        south: [15, 4.625, 15.5, 5.625],
+                        west: [14.5, 4.625, 15, 5.625],
+                        up: [14.5, 4.625, 14, 4.125],
+                        down: [15, 4.125, 14.5, 4.625]
+                    }
+                },
+                // Hands
+                {
+                    name: "Hand_Left",
+                    size: [10, 12, 14],
+                    pos: [-15.188, -10.073, 0.714],
+                    faces: {
+                        north: [13.5, 5.625, 14.125, 6.625],
+                        east: [12.75, 5.625, 13.5, 6.625],
+                        south: [14.75, 5.625, 15.375, 6.625],
+                        west: [14.125, 5.625, 14.75, 6.625],
+                        up: [14.125, 5.625, 13.5, 4.875],
+                        down: [14.75, 4.875, 14.125, 5.625]
+                    }
+                },
+                {
+                    name: "Hand_Right",
+                    size: [10, 12, 14],
+                    pos: [16.477, -9.435, 1.073],
+                    faces: {
+                        north: [11.375, 5.625, 12, 6.625],
+                        east: [10.625, 5.625, 11.375, 6.625],
+                        south: [13.25, 5.625, 13.875, 6.625],
+                        west: [12, 5.625, 12.75, 6.625],
+                        up: [12, 5.625, 11.375, 4.875],
+                        down: [12.625, 4.875, 12, 5.625]
+                    }
+                },
+                // Ears
+                {
+                    name: "Ear_Right",
+                    size: [4, 9, 4],
+                    pos: [14.351, 45.911, 1.05],
+                    faces: {
+                        north: [6.813, 1.313, 7.063, 1.875],
+                        east: [6.563, 1.313, 6.813, 1.875],
+                        south: [7.313, 1.313, 7.563, 1.875],
+                        west: [7.063, 1.313, 7.313, 1.875],
+                        up: [7.063, 1.313, 6.813, 1.063],
+                        down: [7.313, 1.063, 7.063, 1.313]
+                    }
+                },
+                // Ear Left
+                {
+                    name: "Ear_Left",
+                    size: [4, 9, 4],
+                    pos: [-16.649, 45.911, 1.05],
+                    faces: {
+                        north: [6.813, 1.938, 7.063, 2.5],
+                        east: [6.563, 1.938, 6.813, 2.5],
+                        south: [7.313, 1.938, 7.563, 2.5],
+                        west: [7.063, 1.938, 7.313, 2.5],
+                        up: [7.063, 1.938, 6.813, 1.688],
+                        down: [7.313, 1.688, 7.063, 1.938]
+                    }
+                }
+            ]
+        };
+
+
+        // --- 2. APP CORE ---
+
+        const CONFIG = {
+            TEXTURE_SIZE: 256,
+            DEFAULT_TEXTURE_URL: '/mnt/data/HyRigTexture.png' 
+        };
+
+        const STATE = {
+            tool: 'brush',
+            color: '#ff0000',
+            brushSize: 1,
+            isDrawing: false,
+            mirrorMode: false,
+            zoom: 1.0,
+            activeLayerId: 0,
+            layerCounter: 0
+        };
+
+        // --- HISTORY MANAGER ---
+        class HistoryManager {
+            constructor() {
+                this.stack = [];
+                this.pointer = -1;
+                this.limit = 20;
+            }
+            save() {
+                if (!window.app) return;
+                const layer = window.app.layers.getActive();
+                if (!layer) return;
+                if (this.pointer < this.stack.length - 1) {
+                    this.stack = this.stack.slice(0, this.pointer + 1);
+                }
+                const data = layer.ctx.getImageData(0, 0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+                this.stack.push({ layerId: layer.id, data });
+                if (this.stack.length > this.limit) this.stack.shift();
+                else this.pointer++;
+            }
+            undo() {
+                if (this.pointer > 0) {
+                    this.pointer--;
+                    this.restore(this.stack[this.pointer]);
+                }
+            }
+            redo() {
+                if (this.pointer < this.stack.length - 1) {
+                    this.pointer++;
+                    this.restore(this.stack[this.pointer]);
+                }
+            }
+            restore(state) {
+                if (!state) return;
+                const layer = window.app.layers.layers.find(l => l.id === state.layerId);
+                if (layer) {
+                    layer.ctx.putImageData(state.data, 0, 0);
+                    window.app.layers.updateComposite();
+                }
+            }
+        }
+
+        // --- UI MANAGER ---
+        class UIManager {
+            constructor() {
+                this.setupColorPicker();
+                this.setupTools();
+                this.setupFile();
+                this.updatePalette(["#000000", "#ffffff", "#ef4444", "#3b82f6", "#8d5524", "#e0ac69"]);
+            }
+            setupColorPicker() {
+                const input = document.getElementById('main-color');
+                input.addEventListener('input', (e) => STATE.color = e.target.value);
+            }
+            updatePalette(colors) {
+                const grid = document.getElementById('palette-grid');
+                grid.innerHTML = '';
+                colors.forEach(color => {
+                    const el = document.createElement('div');
+                    el.className = "w-6 h-6 rounded cursor-pointer palette-swatch border border-slate-200";
+                    el.style.backgroundColor = color;
+                    el.dataset.color = color;
+                    el.onclick = () => {
+                        STATE.color = color;
+                        document.getElementById('main-color').value = color;
+                    };
+                    grid.appendChild(el);
+                });
+            }
+            setupTools() {
+                const setTool = (t) => {
+                    STATE.tool = t;
+                    this.updateTools();
+                };
+                document.getElementById('tool-brush').onclick = () => setTool('brush');
+                document.getElementById('tool-eraser').onclick = () => setTool('eraser');
+                document.getElementById('tool-fill').onclick = () => setTool('fill');
+                document.getElementById('tool-picker').onclick = () => setTool('picker');
+                document.getElementById('brush-size').addEventListener('input', (e) => {
+                    STATE.brushSize = e.target.value;
+                    document.getElementById('brush-size-val').innerText = STATE.brushSize;
+                });
+                document.getElementById('mirror-mode').onclick = function() {
+                    STATE.mirrorMode = !STATE.mirrorMode;
+                    this.classList.toggle('bg-indigo-100', STATE.mirrorMode);
+                    this.classList.toggle('text-indigo-700', STATE.mirrorMode);
+                };
+                window.addEventListener('keydown', (e) => {
+                    if(e.ctrlKey && e.key === 'z') window.app.history.undo();
+                    else if(e.ctrlKey && e.key === 'y') window.app.history.redo();
+                    else if(e.key === 'b') setTool('brush');
+                    else if(e.key === 'e') setTool('eraser');
+                    else if(e.key === 'f') setTool('fill');
+                    else if(e.key === 'p') setTool('picker');
+                });
+            }
+            updateTools() {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tool-${STATE.tool}`).classList.add('active');
+            }
+            setupFile() {
+                const input = document.getElementById('file-upload');
+                input.onchange = (e) => { if(e.target.files[0]) this.loadFile(e.target.files[0]); };
+                const dropZone = document.getElementById('drop-zone');
+                document.body.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.remove('hidden'); });
+                document.body.addEventListener('dragleave', (e) => { if(e.clientX===0) dropZone.classList.add('hidden'); });
+                document.body.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('hidden');
+                    if(e.dataTransfer.files[0]) this.loadFile(e.dataTransfer.files[0]);
+                });
+            }
+            loadFile(file) {
+                if (!file.type.match('image.*')) return alert("Solo imágenes PNG");
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        if(img.width !== 256 || img.height !== 256) alert("Aviso: La imagen no es 256x256. Puede verse mal.");
+                        window.app.layers.loadBaseImage(img);
+                        document.getElementById('status-msg').innerText = "Archivo cargado: " + file.name;
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            setColor(hex) {
+                STATE.color = hex;
+                document.getElementById('main-color').value = hex;
+            }
+            newFile() {
+                if(confirm("¿Borrar todo y empezar de nuevo?")) location.reload();
+            }
+        }
+
+        // --- AI MANAGER ---
+        class AIManager {
+            constructor() {
+                this.apiKey = ""; // Injected by environment
+                this.modal = document.getElementById('ai-modal');
+                this.resultsDiv = document.getElementById('ai-results');
+                this.inputPrompt = document.getElementById('palette-prompt');
+                this.currentTab = 'palette';
+            }
+
+            toggleModal() {
+                this.modal.classList.toggle('hidden');
+            }
+
+            setTab(tab) {
+                this.currentTab = tab;
+                document.getElementById('tab-palette').classList.toggle('bg-white', tab === 'palette');
+                document.getElementById('tab-palette').classList.toggle('shadow-sm', tab === 'palette');
+                document.getElementById('tab-palette').classList.toggle('text-purple-600', tab === 'palette');
+                document.getElementById('tab-palette').classList.toggle('text-slate-500', tab !== 'palette');
+                
+                document.getElementById('tab-critic').classList.toggle('bg-white', tab === 'critic');
+                document.getElementById('tab-critic').classList.toggle('shadow-sm', tab === 'critic');
+                document.getElementById('tab-critic').classList.toggle('text-purple-600', tab === 'critic');
+                document.getElementById('tab-critic').classList.toggle('text-slate-500', tab !== 'critic');
+
+                document.getElementById('panel-palette').classList.toggle('hidden', tab !== 'palette');
+                document.getElementById('panel-critic').classList.toggle('hidden', tab !== 'critic');
+                this.resultsDiv.innerHTML = '<div class="text-center text-slate-400 mt-4">Los resultados aparecerán aquí...</div>';
+            }
+
+            async callGemini(prompt, imageBase64 = null) {
+                if(!this.apiKey && typeof apiKey !== 'undefined') this.apiKey = apiKey;
+                
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${this.apiKey}`;
+                
+                const parts = [{ text: prompt }];
+                if (imageBase64) {
+                    const base64Data = imageBase64.split(',')[1];
+                    parts.push({
+                        inlineData: {
+                            mimeType: "image/png",
+                            data: base64Data
+                        }
+                    });
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: parts }] })
+                    });
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Error en la respuesta de IA";
+                } catch (error) {
+                    console.error(error);
+                    return "Error conectando con Gemini.";
+                }
+            }
+
+            async generatePalette() {
+                const theme = this.inputPrompt.value;
+                if(!theme) return;
+
+                this.resultsDiv.innerHTML = '<div class="flex justify-center p-4"><i class="fas fa-spinner fa-spin text-purple-500 text-2xl"></i></div>';
+
+                const prompt = `Generate a JSON array of 6 distinct hexadecimal color codes that fit a Hytale character skin theme: "${theme}". Return ONLY the JSON array, no text. Example: ["#ffffff", "#000000"]`;
+                
+                const response = await this.callGemini(prompt);
+                
+                try {
+                    const jsonStr = response.replace(/```json|```/g, '').trim();
+                    const colors = JSON.parse(jsonStr);
+                    
+                    if(Array.isArray(colors)) {
+                        window.app.ui.updatePalette(colors);
+                        this.resultsDiv.innerHTML = `<div class="text-green-600 font-bold mb-2">¡Paleta "${theme}" aplicada!</div><div class="flex gap-1">${colors.map(c => `<div class="w-6 h-6 rounded border border-slate-200" style="background:${c}"></div>`).join('')}</div>`;
+                    } else {
+                        throw new Error("Formato inválido");
+                    }
+                } catch (e) {
+                    this.resultsDiv.innerHTML = '<div class="text-red-500">No se pudo generar la paleta. Intenta de nuevo.</div>';
+                }
+            }
+
+            async analyzeSkin() {
+                const canvas = window.app.layers.compositeCanvas;
+                const base64 = canvas.toDataURL('image/png');
+
+                this.resultsDiv.innerHTML = '<div class="flex justify-center p-4"><i class="fas fa-spinner fa-spin text-indigo-500 text-2xl"></i></div>';
+
+                const prompt = "Actúa como un artista experto en pixel art para videojuegos como Hytale. Analiza esta textura de skin de personaje (mapa UV). Dame 3 consejos breves y constructivos para mejorar el diseño, el sombreado o la elección de colores. Responde en español, formato markdown lista.";
+
+                const response = await this.callGemini(prompt, base64);
+                this.resultsDiv.innerHTML = marked.parse(response);
+            }
+        }
+
+        class LayerManager {
+            constructor() {
+                this.layers = [];
+                this.listElement = document.getElementById('layers-list');
+                this.compositeCanvas = document.createElement('canvas');
+                this.compositeCanvas.width = CONFIG.TEXTURE_SIZE;
+                this.compositeCanvas.height = CONFIG.TEXTURE_SIZE;
+                this.compositeCtx = this.compositeCanvas.getContext('2d', { willReadFrequently: true });
+                
+                this.addLayer("Detalles / Top");
+                this.addLayer("Ropa");
+                this.addLayer("Piel Base");
+                
+                this.setActive(this.layers[2].id);
+            }
+
+            addLayer(name = "Capa") {
+                const id = STATE.layerCounter++;
+                const canvas = document.createElement('canvas');
+                canvas.width = CONFIG.TEXTURE_SIZE;
+                canvas.height = CONFIG.TEXTURE_SIZE;
+                canvas.classList.add('absolute', 'top-0', 'left-0', 'w-full', 'h-full', 'pointer-events-none');
+                
+                const wrapper = document.getElementById('canvas-wrapper');
+                wrapper.appendChild(canvas); 
+                
+                // Initialize transparent
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0,0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+
+                const layer = { id, name, canvas, visible: true, ctx };
+                this.layers.unshift(layer); // New layers on top visually in list
+                
+                this.renderUI();
+                return layer;
+            }
+
+            setActive(id) {
+                STATE.activeLayerId = id;
+                this.renderUI();
+            }
+
+            getActive() {
+                return this.layers.find(l => l.id === STATE.activeLayerId);
+            }
+
+            toggleVisibility(id) {
+                const layer = this.layers.find(l => l.id === id);
+                if(layer) {
+                    layer.visible = !layer.visible;
+                    layer.canvas.style.display = layer.visible ? 'block' : 'none';
+                    this.updateComposite();
+                    this.renderUI();
+                }
+            }
+
+            renderUI() {
+                this.listElement.innerHTML = '';
+                this.layers.forEach(layer => {
+                    const item = document.createElement('div');
+                    const isActive = layer.id === STATE.activeLayerId;
+                    item.className = `flex items-center gap-2 p-2 rounded text-xs cursor-pointer border select-none ${isActive ? 'bg-indigo-50 border-indigo-300' : 'bg-white border-transparent hover:bg-slate-50'}`;
+                    item.onclick = () => this.setActive(layer.id);
+                    item.innerHTML = `
+                        <button class="w-4 h-4 text-slate-400 hover:text-indigo-600" onclick="event.stopPropagation(); window.app.layers.toggleVisibility(${layer.id})">
+                            <i class="fas ${layer.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        </button>
+                        <span class="flex-1 truncate font-medium ${isActive ? 'text-indigo-700' : 'text-slate-600'}">${layer.name}</span>
+                        ${isActive ? '<i class="fas fa-pen text-[10px] text-indigo-400"></i>' : ''}
+                    `;
+                    this.listElement.appendChild(item);
+                });
+            }
+
+            updateComposite() {
+                this.compositeCtx.clearRect(0, 0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+                for (let i = this.layers.length - 1; i >= 0; i--) {
+                    if (this.layers[i].visible) {
+                        this.compositeCtx.drawImage(this.layers[i].canvas, 0, 0);
+                    }
+                }
+                if(window.app && window.app.viewer) {
+                    window.app.viewer.updateTexture(this.compositeCanvas);
+                }
+            }
+
+            loadBaseImage(img) {
+                const baseLayer = this.layers[this.layers.length - 1];
+                baseLayer.ctx.clearRect(0, 0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+                baseLayer.ctx.drawImage(img, 0, 0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+                this.updateComposite();
+                window.app.history.save();
+            }
+        }
+
+        class Editor2D {
+            constructor() {
+                this.container = document.getElementById('canvas-wrapper');
+                this.container.style.width = `${CONFIG.TEXTURE_SIZE}px`;
+                this.container.style.height = `${CONFIG.TEXTURE_SIZE}px`;
+                this.setupEvents();
+                this.zoom(0);
+            }
+
+            setupEvents() {
+                const start = (e) => {
+                    STATE.isDrawing = true;
+                    this.paint(e);
+                    e.preventDefault();
+                };
+                const move = (e) => {
+                    if (STATE.isDrawing) this.paint(e);
+                };
+                const end = () => {
+                    if (STATE.isDrawing) {
+                        STATE.isDrawing = false;
+                        window.app.history.save();
+                    }
+                };
+
+                this.container.addEventListener('mousedown', start);
+                window.addEventListener('mousemove', move);
+                window.addEventListener('mouseup', end);
+                this.container.addEventListener('touchstart', (e) => start(e.touches[0]));
+                window.addEventListener('touchmove', (e) => { e.preventDefault(); move(e.touches[0]); }, {passive: false});
+                window.addEventListener('touchend', end);
+            }
+
+            getCoords(e) {
+                const rect = this.container.getBoundingClientRect();
+                const scale = CONFIG.TEXTURE_SIZE / rect.width;
+                const x = Math.floor((e.clientX - rect.left) * scale);
+                const y = Math.floor((e.clientY - rect.top) * scale);
+                return { x, y };
+            }
+
+            paint(e) {
+                if (!window.app) return;
+                const layer = window.app.layers.getActive();
+                if (!layer || !layer.visible) return;
+
+                const { x, y } = this.getCoords(e);
+                if (x < 0 || x >= CONFIG.TEXTURE_SIZE || y < 0 || y >= CONFIG.TEXTURE_SIZE) return;
+
+                const ctx = layer.ctx;
+                const size = parseInt(STATE.brushSize);
+                
+                const draw = (lx, ly) => {
+                    if (STATE.tool === 'brush') {
+                        ctx.fillStyle = STATE.color;
+                        ctx.fillRect(lx, ly, size, size);
+                    } else if (STATE.tool === 'eraser') {
+                        ctx.clearRect(lx, ly, size, size);
+                    }
+                };
+
+                draw(x, y);
+
+                if (STATE.mirrorMode) {
+                    const center = CONFIG.TEXTURE_SIZE / 2;
+                    const trueMirrorX = CONFIG.TEXTURE_SIZE - x - size;
+                    draw(trueMirrorX, y); 
+                }
+
+                if (STATE.tool === 'picker') {
+                    const p = window.app.layers.compositeCtx.getImageData(x, y, 1, 1).data;
+                    const hex = "#" + ("000000" + ((p[0] << 16) | (p[1] << 8) | p[2]).toString(16)).slice(-6);
+                    window.app.ui.setColor(hex);
+                    STATE.tool = 'brush';
+                    window.app.ui.updateTools();
+                } else if (STATE.tool === 'fill') {
+                    ctx.fillStyle = STATE.color;
+                    ctx.fillRect(0,0, CONFIG.TEXTURE_SIZE, CONFIG.TEXTURE_SIZE);
+                    STATE.isDrawing = false;
+                    window.app.history.save();
+                }
+
+                window.app.layers.updateComposite();
+            }
+
+            zoom(delta) {
+                STATE.zoom = Math.max(0.5, Math.min(4.0, STATE.zoom + delta));
+                this.container.style.transform = `scale(${STATE.zoom})`;
+                document.getElementById('zoom-level').innerText = Math.round(STATE.zoom * 100) + "%";
+            }
+        }
+
+        // --- NEW 3D VIEWER (Replacing createPart logic) ---
+        class Viewer3D {
+            constructor(textureCanvas, containerId = "viewer-3d") {
+                this.container = document.getElementById(containerId);
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0xf8fafc);
+
+                const w = this.container.clientWidth || 320;
+                const h = this.container.clientHeight || 320;
+
+                this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+                this.camera.position.set(0, 70, 140);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(w, h);
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.container.appendChild(this.renderer.domElement);
+
+                const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+                this.scene.add(hemi);
+                const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+                dir.position.set(80, 120, 60);
+                this.scene.add(dir);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.1;
+                this.controls.target.set(0, 45, 0);
+
+                this.texture = new THREE.CanvasTexture(textureCanvas);
+                this.texture.magFilter = THREE.NearestFilter;
+                this.texture.minFilter = THREE.NearestFilter;
+                this.texture.flipY = false;
+
+                this.material = new THREE.MeshStandardMaterial({
+                    map: this.texture,
+                    roughness: 0.6,
+                    metalness: 0.1,
+                    transparent: true,
+                    alphaTest: 0.05
+                });
+
+                this.rigGroup = new THREE.Group();
+                this.scene.add(this.rigGroup);
+
+                this.buildRig();
+
+                this.isSpinning = false;
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+
+                window.addEventListener("resize", () => this.onResize());
+            }
+
+            buildRig() {
+                RIG_DATA.parts.forEach(part => {
+                    this.createPart(part);
+                });
+            }
+
+            createPart(data) {
+                const w = data.size[0] || 0.01;
+                const h = data.size[1] || 0.01;
+                const d = data.size[2] || 0.01;
+
+                const geometry = new THREE.BoxGeometry(w, h, d);
+                const uvAttr = geometry.attributes.uv;
+
+                const setUV = (faceIdx, uvArray) => {
+                    const [uMin, vMin, uMax, vMax] = uvArray;
+
+                    const u0 = uMin / RIG_DATA.resolution;
+                    const u1 = uMax / RIG_DATA.resolution;
+                    const v0 = 1 - (vMax / RIG_DATA.resolution);
+                    const v1 = 1 - (vMin / RIG_DATA.resolution);
+
+                    const o = faceIdx * 4;
+                    uvAttr.setXY(o + 0, u0, v1);
+                    uvAttr.setXY(o + 1, u1, v1);
+                    uvAttr.setXY(o + 2, u0, v0);
+                    uvAttr.setXY(o + 3, u1, v0);
+                };
+
+                // Orden correcto entre Blockbench y BoxGeometry:
+                // Box: 0:+X,1:-X,2:+Y,3:-Y,4:+Z,5:-Z
+                // BB : east, west, up, down, south(+Z), north(-Z)
+                setUV(0, data.faces.east);
+                setUV(1, data.faces.west);
+                setUV(2, data.faces.up);
+                setUV(3, data.faces.down);
+                setUV(4, data.faces.south); // +Z
+                setUV(5, data.faces.north); // -Z
+
+                geometry.attributes.uv.needsUpdate = true;
+
+                const mesh = new THREE.Mesh(geometry, this.material);
+                mesh.position.set(data.pos[0], data.pos[1], data.pos[2]);
+                this.rigGroup.add(mesh);
+            }
+
+            updateTexture(canvas) {
+                this.texture.image = canvas;
+                this.texture.needsUpdate = true;
+            }
+
+            toggleSpin() {
+                this.isSpinning = !this.isSpinning;
+            }
+
+            toggleGrid() {
+                if(this.grid) {
+                    this.scene.remove(this.grid);
+                    this.grid = null;
+                } else {
+                    this.grid = new THREE.GridHelper(200, 20, 0xcccccc, 0xeeeeee);
+                    this.scene.add(this.grid);
+                }
+            }
+
+            resetCamera() {
+                this.controls.reset();
+                this.camera.position.set(0, 70, 140);
+                this.controls.target.set(0, 45, 0);
+            }
+
+            onResize() {
+                const w = this.container.clientWidth || 320;
+                const h = this.container.clientHeight || 320;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate);
+                if (this.isSpinning) {
+                    this.rigGroup.rotation.y += 0.01;
+                }
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        class App {
+            constructor() {
+                this.layers = new LayerManager();
+                this.history = new HistoryManager();
+                this.ui = new UIManager();
+                this.ai = new AIManager();
+                
+                requestAnimationFrame(() => {
+                    this.editor = new Editor2D();
+                    // Updated instantiation
+                    this.viewer = new Viewer3D(this.layers.compositeCanvas, "viewer-3d");
+                    
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous";
+                    img.onload = () => this.layers.loadBaseImage(img);
+                    img.onerror = () => console.log("No default texture found.");
+                    img.src = CONFIG.DEFAULT_TEXTURE_URL;
+                });
+            }
+
+            exportSkin() {
+                const link = document.createElement('a');
+                link.download = `HytaleSkin_${Date.now()}.png`;
+                link.href = this.layers.compositeCanvas.toDataURL('image/png');
+                link.click();
+            }
+
+            saveToCloud() {
+                const btn = document.querySelector('button[onclick="app.saveToCloud()"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Guardando...`;
+                setTimeout(() => {
+                    btn.innerHTML = `<i class="fas fa-check"></i> Guardado`;
+                    setTimeout(() => btn.innerHTML = originalText, 2000);
+                }, 1000);
+            }
+        }
+
+        const apiKey = ""; // Environment injected
+        window.app = new App();
+
     </script>
-  </body>
+</body>
 </html>
