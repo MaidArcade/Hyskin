@@ -2,7 +2,6 @@
  * Main Application Class
  */
 import { CONFIG, getInitialState, DEFAULT_PALETTE } from './config/constants.js';
-import { RIG_DATA } from './data/rigData.js';
 import { HistoryManager } from './managers/HistoryManager.js';
 import { LayerManager } from './managers/LayerManager.js';
 import { UIManager } from './managers/UIManager.js';
@@ -25,7 +24,7 @@ export class App {
     // Initialize editors on next frame to ensure DOM is ready
     requestAnimationFrame(() => {
       this.editor = new Editor2D(this, CONFIG);
-      this.viewer = new Viewer3D(this.layers.compositeCanvas, RIG_DATA, 'viewer-3d');
+      this.viewer = new Viewer3D(this.layers.compositeCanvas, 'viewer-3d');
 
       // Load default texture if available
       const img = new Image();
