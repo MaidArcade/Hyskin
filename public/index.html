@@ -54,6 +54,22 @@
             border-color: var(--primary);
         }
 
+        .brush-type {
+            width: 26px;
+            height: 26px;
+            border-radius: 9999px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #475569;
+        }
+
+        .brush-type.active {
+            background: #e0e7ff;
+            color: #4f46e5;
+            border-color: #c7d2fe;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+        }
+
         canvas { image-rendering: pixelated; }
 
         /* AI Sparkle Animation */
@@ -64,6 +80,25 @@
         }
         .sparkle-icon {
             animation: sparkle 2s infinite ease-in-out;
+        }
+
+        #layout-main {
+            transition: all 0.25s ease;
+        }
+
+        #layout-aside {
+            transition: all 0.25s ease;
+        }
+
+        body.swap-layout #layout-main {
+            order: 2;
+            flex: 0 0 380px;
+        }
+
+        body.swap-layout #layout-aside {
+            order: 1;
+            flex: 1 1 auto;
+            width: auto;
         }
     </style>
 </head>
@@ -128,6 +163,7 @@
                 <div class="relative group">
                     <input type="color" id="main-color" value="#ff0000" class="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-sm p-0 overflow-hidden">
                 </div>
+                <canvas id="color-spectrum" width="180" height="120" class="rounded-lg overflow-hidden border border-slate-200 shadow-sm cursor-crosshair"></canvas>
                 <!-- Palette Grid -->
                 <div id="palette-grid" class="grid grid-cols-2 gap-1 p-1">
                     <!-- Populated by JS -->
@@ -141,23 +177,47 @@
         </aside>
 
         <!-- Center Canvas Area -->
-        <main class="flex-1 flex flex-col bg-slate-100 relative min-w-0">
+        <main id="layout-main" class="flex-1 flex flex-col bg-slate-100 relative min-w-0">
             <!-- Top Bar -->
-            <div class="h-10 bg-white border-b border-slate-200 flex items-center px-4 gap-4 shrink-0">
+            <div class="h-14 bg-white border-b border-slate-200 flex items-center px-4 gap-6 shrink-0">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Tamaño</span>
-                    <input type="range" id="brush-size" min="1" max="10" value="1" class="w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                    <span id="brush-size-val" class="text-xs font-mono w-4">1</span>
+                    <span class="text-[11px] font-bold text-slate-400 uppercase">Tamaño</span>
+                    <input type="range" id="brush-size" min="1" max="32" value="1" class="w-28 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    <span id="brush-size-val" class="text-xs font-mono w-6">1</span>
                 </div>
-                <div class="w-px h-4 bg-slate-200"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase">Opacidad</span>
+                    <input type="range" id="brush-opacity" min="0.1" max="1" step="0.05" value="1" class="w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    <span id="brush-opacity-val" class="text-xs font-mono w-10 text-right">100%</span>
+                </div>
+                <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-full px-2 py-1 text-[11px] font-bold text-slate-500">
+                    <span class="uppercase">Pincel</span>
+                    <div class="flex items-center gap-1 ml-1">
+                        <button class="brush-type" data-type="square" title="Cuadrado">
+                            <i class="fas fa-square-full"></i>
+                        </button>
+                        <button class="brush-type" data-type="circle" title="Circular">
+                            <i class="fas fa-circle"></i>
+                        </button>
+                        <button class="brush-type" data-type="spray" title="Aerosol">
+                            <i class="fas fa-spray-can"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="w-px h-6 bg-slate-200"></div>
                 <button id="mirror-mode" class="flex items-center gap-2 px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-indigo-50 transition">
                     <i class="fas fa-arrows-alt-h"></i> Espejo
                 </button>
                 <div class="flex-1"></div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.app.editor.zoom(-0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-minus text-xs"></i></button>
-                    <span id="zoom-level" class="text-xs font-mono">100%</span>
-                    <button onclick="window.app.editor.zoom(0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-plus text-xs"></i></button>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1">
+                        <button onclick="window.app.editor.zoom(-0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-minus text-xs"></i></button>
+                        <span id="zoom-level" class="text-xs font-mono">100%</span>
+                        <button onclick="window.app.editor.zoom(0.1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"><i class="fas fa-plus text-xs"></i></button>
+                    </div>
+                    <button id="swap-views" class="flex items-center gap-2 px-3 py-1 rounded text-xs font-bold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition">
+                        <i class="fas fa-exchange-alt"></i> Intercambiar 2D/3D
+                    </button>
                 </div>
             </div>
 
@@ -216,7 +276,7 @@
         </main>
 
         <!-- Right Panel: 3D & Layers -->
-        <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
+        <aside id="layout-aside" class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
             
             <!-- 3D Preview -->
             <div class="h-[400px] bg-slate-50 relative border-b border-slate-200 group">
@@ -225,8 +285,12 @@
                 <!-- 3D Controls Overlay -->
                 <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button onclick="app.viewer.resetCamera()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Reset Camera"><i class="fas fa-compress"></i></button>
-                    <button onclick="app.viewer.toggleGrid()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Toggle Grid"><i class="fas fa-border-all"></i></button>
+                    <button onclick="app.viewer.toggleGrid()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Rejilla de escena"><i class="fas fa-border-all"></i></button>
+                    <button onclick="app.viewer.togglePaintGrid()" id="paint-grid-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Guías para pintar"><i class="fas fa-drafting-compass"></i></button>
                     <button onclick="app.viewer.toggleSpin()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600" title="Auto Rotate"><i class="fas fa-sync"></i></button>
+                    <button id="toggle-3d-paint" class="px-2 h-8 flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200 hover:bg-indigo-100" title="Pintar directo sobre el modelo">
+                        <i class="fas fa-brush"></i> Pintar 3D
+                    </button>
                 </div>
                 
                 <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-white/80 px-2 py-0.5 rounded">3D Preview</div>

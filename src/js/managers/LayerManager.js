@@ -52,6 +52,7 @@ export class LayerManager {
       id,
       name,
       canvas,
+      opacity: 1,
       visible: true,
       ctx
     };
@@ -98,7 +99,7 @@ export class LayerManager {
     this.layers.forEach((layer) => {
       const item = document.createElement('div');
       const isActive = layer.id === this.app.state.activeLayerId;
-      
+
       item.className = `flex items-center gap-2 p-2 rounded text-xs cursor-pointer border select-none ${
         isActive
           ? 'bg-indigo-50 border-indigo-300'
@@ -117,6 +118,37 @@ export class LayerManager {
         ${isActive ? '<i class="fas fa-pen text-[10px] text-indigo-400"></i>' : ''}
       `;
 
+      const opacityControl = document.createElement('input');
+      opacityControl.type = 'range';
+      opacityControl.min = 0.05;
+      opacityControl.max = 1;
+      opacityControl.step = 0.05;
+      opacityControl.value = layer.opacity;
+      opacityControl.className = 'w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer';
+      opacityControl.onclick = (ev) => ev.stopPropagation();
+      opacityControl.oninput = (ev) => {
+        layer.opacity = parseFloat(ev.target.value);
+        this.updateComposite();
+      };
+
+      const controls = document.createElement('div');
+      controls.className = 'flex items-center gap-2 w-full px-1 mt-1';
+      const opLabel = document.createElement('span');
+      opLabel.className = 'text-[10px] uppercase text-slate-400 font-bold';
+      opLabel.innerText = 'Opacidad';
+      const opValue = document.createElement('span');
+      opValue.className = 'text-[10px] font-mono text-slate-500 w-10 text-right';
+      opValue.innerText = Math.round(layer.opacity * 100) + '%';
+      opacityControl.addEventListener('input', () => {
+        opValue.innerText = Math.round(layer.opacity * 100) + '%';
+      });
+
+      controls.appendChild(opLabel);
+      controls.appendChild(opacityControl);
+      controls.appendChild(opValue);
+
+      item.appendChild(controls);
+
       this.listElement.appendChild(item);
     });
   }
@@ -129,9 +161,12 @@ export class LayerManager {
 
     for (let i = this.layers.length - 1; i >= 0; i--) {
       if (this.layers[i].visible) {
+        this.compositeCtx.globalAlpha = this.layers[i].opacity;
         this.compositeCtx.drawImage(this.layers[i].canvas, 0, 0);
       }
     }
+
+    this.compositeCtx.globalAlpha = 1;
 
     if (this.app && this.app.viewer) {
       this.app.viewer.updateTexture(this.compositeCanvas);

@@ -6,6 +6,7 @@ export class UIManager {
     this.app = app;
     this.config = config;
     this.setupColorPicker();
+    this.setupSpectrum();
     this.setupTools();
     this.setupFile();
     this.updatePalette(this.app.DEFAULT_PALETTE);
@@ -18,6 +19,57 @@ export class UIManager {
     const input = document.getElementById('main-color');
     input.addEventListener('input', (e) => {
       this.app.state.color = e.target.value;
+    });
+  }
+
+  /**
+   * Full spectrum canvas picker
+   */
+  setupSpectrum() {
+    const canvas = document.getElementById('color-spectrum');
+    const ctx = canvas.getContext('2d');
+
+    const drawSpectrum = () => {
+      const gradientX = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradientX.addColorStop(0, 'red');
+      gradientX.addColorStop(0.16, 'orange');
+      gradientX.addColorStop(0.33, 'yellow');
+      gradientX.addColorStop(0.5, 'green');
+      gradientX.addColorStop(0.66, 'cyan');
+      gradientX.addColorStop(0.83, 'blue');
+      gradientX.addColorStop(1, 'magenta');
+      ctx.fillStyle = gradientX;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const gradientY = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradientY.addColorStop(0, 'rgba(255,255,255,0.8)');
+      gradientY.addColorStop(0.5, 'rgba(255,255,255,0)');
+      gradientY.addColorStop(1, 'rgba(0,0,0,0.7)');
+      ctx.fillStyle = gradientY;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+
+    drawSpectrum();
+
+    const pick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.min(canvas.width, Math.max(0, e.clientX - rect.left));
+      const y = Math.min(canvas.height, Math.max(0, e.clientY - rect.top));
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      const hex =
+        '#' + ('000000' + ((pixel[0] << 16) | (pixel[1] << 8) | pixel[2]).toString(16)).slice(-6);
+      this.setColor(hex);
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+      pick(e);
+      const move = (ev) => pick(ev);
+      const up = () => {
+        window.removeEventListener('mousemove', move);
+        window.removeEventListener('mouseup', up);
+      };
+      window.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
     });
   }
 
@@ -60,11 +112,38 @@ export class UIManager {
       document.getElementById('brush-size-val').innerText = this.app.state.brushSize;
     });
 
+    document.getElementById('brush-opacity').addEventListener('input', (e) => {
+      this.app.state.brushOpacity = parseFloat(e.target.value);
+      document.getElementById('brush-opacity-val').innerText =
+        Math.round(this.app.state.brushOpacity * 100) + '%';
+    });
+
+    document.querySelectorAll('.brush-type').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.app.state.brushType = btn.dataset.type;
+        document.querySelectorAll('.brush-type').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    document.querySelector('.brush-type[data-type="square"]').classList.add('active');
+
     document.getElementById('mirror-mode').onclick = function () {
       this.app.state.mirrorMode = !this.app.state.mirrorMode;
       this.classList.toggle('bg-indigo-100', this.app.state.mirrorMode);
       this.classList.toggle('text-indigo-700', this.app.state.mirrorMode);
     }.bind(this);
+
+    document.getElementById('swap-views').onclick = () => {
+      this.app.state.viewMode = this.app.state.viewMode === '2d' ? '3d' : '2d';
+      document.body.classList.toggle('swap-layout', this.app.state.viewMode === '3d');
+    };
+
+    document.getElementById('toggle-3d-paint').onclick = (e) => {
+      this.app.state.paintOn3D = !this.app.state.paintOn3D;
+      e.currentTarget.classList.toggle('bg-indigo-600', this.app.state.paintOn3D);
+      e.currentTarget.classList.toggle('text-white', this.app.state.paintOn3D);
+    };
 
     this.setupKeyboardShortcuts();
   }
