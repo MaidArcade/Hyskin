@@ -256,7 +256,7 @@ export function createHytaleRigFromBB(texture) {
     map: texture,
     roughness: 0.6,
     metalness: 0.1,
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
     transparent: true,
     alphaTest: 0.1
   });
@@ -268,8 +268,8 @@ export function createHytaleRigFromBB(texture) {
     group.add(mesh);
   });
 
-  // Centrado aproximado del muñeco
-  group.position.set(-8, 0, -8);
+  // Posicionado neutro; la cámara se centra con OrbitControls
+  group.position.set(0, 0, 0);
   return group;
 }
 
