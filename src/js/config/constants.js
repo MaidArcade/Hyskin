@@ -1,0 +1,60 @@
+/**
+ * Configuration constants for the application
+ */
+export const CONFIG = {
+  TEXTURE_SIZE: 256,
+  DEFAULT_TEXTURE_URL: '/assets/default-skin.png',
+  BRUSH_MAX_SIZE: 10,
+  HISTORY_LIMIT: 20,
+  ZOOM_MIN: 0.5,
+  ZOOM_MAX: 4.0,
+  ZOOM_STEP: 0.1
+};
+
+/**
+ * Initial application state
+ */
+export const getInitialState = () => ({
+  tool: 'brush',
+  color: '#ff0000',
+  brushSize: 1,
+  isDrawing: false,
+  mirrorMode: false,
+  zoom: 1.0,
+  activeLayerId: 0,
+  layerCounter: 0
+});
+
+/**
+ * Default color palette
+ */
+export const DEFAULT_PALETTE = [
+  '#000000',
+  '#ffffff',
+  '#ef4444',
+  '#3b82f6',
+  '#8d5524',
+  '#e0ac69'
+];
+
+/**
+ * Tool definitions
+ */
+export const TOOLS = {
+  BRUSH: 'brush',
+  ERASER: 'eraser',
+  FILL: 'fill',
+  PICKER: 'picker'
+};
+
+/**
+ * Keyboard shortcuts
+ */
+export const SHORTCUTS = {
+  UNDO: { ctrl: true, key: 'z' },
+  REDO: { ctrl: true, key: 'y' },
+  BRUSH: 'b',
+  ERASER: 'e',
+  FILL: 'f',
+  PICKER: 'p'
+};

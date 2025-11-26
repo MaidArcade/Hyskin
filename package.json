@@ -1,0 +1,32 @@
+{
+  "name": "hytale-skinforge",
+  "version": "1.0.0",
+  "description": "Professional Hytale Skin Editor with AI-powered tools",
+  "type": "module",
+  "main": "src/js/app.js",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node build.js",
+    "start": "node server.js",
+    "lint": "eslint src/js",
+    "format": "prettier --write src/**"
+  },
+  "keywords": [
+    "hytale",
+    "skin-editor",
+    "pixel-art",
+    "3d-viewer",
+    "ai"
+  ],
+  "author": "MaidArcade",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.3",
+    "eslint": "^8.50.0"
+  }
+}

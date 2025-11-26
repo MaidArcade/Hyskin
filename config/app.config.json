@@ -1,0 +1,71 @@
+{
+  "app": {
+    "name": "Hytale SkinForge",
+    "version": "1.0.0",
+    "description": "Professional Hytale character skin editor with AI",
+    "author": "MaidArcade",
+    "repository": "https://github.com/MaidArcade/Hyskin"
+  },
+  "features": {
+    "2d_editor": true,
+    "3d_preview": true,
+    "ai_integration": true,
+    "layer_system": true,
+    "undo_redo": true,
+    "cloud_save": false,
+    "user_accounts": false,
+    "sharing": false
+  },
+  "limits": {
+    "max_layers": 50,
+    "history_states": 20,
+    "canvas_size": 256,
+    "brush_max_size": 10,
+    "max_upload_size_mb": 50
+  },
+  "apis": {
+    "gemini": {
+      "model": "gemini-2.5-flash-preview-09-2025",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
+      "timeout_ms": 30000
+    }
+  },
+  "tools": [
+    {
+      "id": "brush",
+      "name": "Brush",
+      "icon": "fa-paint-brush",
+      "shortcut": "b",
+      "description": "Paint with selected color"
+    },
+    {
+      "id": "eraser",
+      "name": "Eraser",
+      "icon": "fa-eraser",
+      "shortcut": "e",
+      "description": "Remove pixels"
+    },
+    {
+      "id": "fill",
+      "name": "Fill",
+      "icon": "fa-fill-drip",
+      "shortcut": "f",
+      "description": "Fill canvas with color"
+    },
+    {
+      "id": "picker",
+      "name": "Color Picker",
+      "icon": "fa-eye-dropper",
+      "shortcut": "p",
+      "description": "Sample colors from canvas"
+    }
+  ],
+  "default_palette": [
+    "#000000",
+    "#ffffff",
+    "#ef4444",
+    "#3b82f6",
+    "#8d5524",
+    "#e0ac69"
+  ]
+}

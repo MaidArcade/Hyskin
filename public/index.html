@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editor de Skins Hytale - Rig Oficial + IA</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+
+  <body class="h-screen flex flex-col text-slate-700">
+    <!-- Header -->
+    <nav
+      class="h-14 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 z-20 shadow-sm"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold shadow-sm"
+        >
+          H
+        </div>
+        <h1 class="font-bold text-lg tracking-tight">
+          Hytale<span class="text-indigo-500">SkinForge</span>
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- AI Button -->
+        <button
+          onclick="app.ai.toggleModal()"
+          class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2 border border-transparent"
+        >
+          <i class="fas fa-magic sparkle-icon"></i> Asistente IA
+        </button>
+
+        <div class="w-px h-6 bg-slate-200 mx-1"></div>
+
+        <button
+          onclick="app.ui.newFile()"
+          class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition"
+        >
+          Nuevo
+        </button>
+
+        <div class="relative group">
+          <button
+            class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition"
+          >
+            Archivo
+          </button>
+
+          <!-- Dropdown -->
+          <div
+            class="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg hidden group-hover:block py-1 z-50"
+          >
+            <label
+              for="file-upload"
+              class="block px-4 py-2 text-sm hover:bg-indigo-50 cursor-pointer"
+            >
+              Abrir Skin (PNG)
+            </label>
+            <button
+              onclick="app.exportSkin()"
+              class="block w-full text-left px-4 py-2 text-sm hover:bg-indigo-50"
+            >
+              Exportar (PNG)
+            </button>
+          </div>
+        </div>
+
+        <button
+          onclick="app.saveToCloud()"
+          class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition flex items-center gap-2"
+        >
+          <i class="fas fa-cloud-upload-alt"></i> Guardar
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden">
+      <!-- Left Toolbar -->
+      <aside
+        class="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 gap-4 shrink-0 z-10"
+      >
+        <!-- Tools -->
+        <div class="flex flex-col gap-2 w-full px-2">
+          <button
+            id="tool-brush"
+            class="tool-btn active aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
+            title="Pincel (B)"
+          >
+            <i class="fas fa-paint-brush"></i>
+            <span class="text-[9px] uppercase font-bold">Pintar</span>
+          </button>
+
+          <button
+            id="tool-eraser"
+            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
+            title="Borrador (E)"
+          >
+            <i class="fas fa-eraser"></i>
+            <span class="text-[9px] uppercase font-bold">Borrar</span>
+          </button>
+
+          <button
+            id="tool-fill"
+            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
+            title="Cubo (F)"
+          >
+            <i class="fas fa-fill-drip"></i>
+            <span class="text-[9px] uppercase font-bold">Rellenar</span>
+          </button>
+
+          <button
+            id="tool-picker"
+            class="tool-btn aspect-square rounded-lg border border-transparent hover:bg-slate-100 flex flex-col items-center justify-center gap-1 transition"
+            title="Gotero (P)"
+          >
+            <i class="fas fa-eye-dropper"></i>
+            <span class="text-[9px] uppercase font-bold">Color</span>
+          </button>
+        </div>
+
+        <div class="w-10 h-px bg-slate-200"></div>
+
+        <!-- Colors -->
+        <div class="flex flex-col gap-2 items-center w-full">
+          <div class="relative group">
+            <input
+              type="color"
+              id="main-color"
+              value="#ff0000"
+              class="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-sm p-0 overflow-hidden"
+            />
+          </div>
+
+          <!-- Palette Grid -->
+          <div id="palette-grid" class="grid grid-cols-2 gap-1 p-1">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <div class="mt-auto flex flex-col gap-2 w-full px-2 pb-2">
+          <button
+            onclick="window.app.history.undo()"
+            class="w-full py-2 rounded hover:bg-slate-100 text-slate-500"
+            title="Deshacer (Ctrl+Z)"
+          >
+            <i class="fas fa-undo"></i>
+          </button>
+          <button
+            onclick="window.app.history.redo()"
+            class="w-full py-2 rounded hover:bg-slate-100 text-slate-500"
+            title="Rehacer (Ctrl+Y)"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Center Canvas Area -->
+      <main class="flex-1 flex flex-col bg-slate-100 relative min-w-0">
+        <!-- Top Bar -->
+        <div class="h-10 bg-white border-b border-slate-200 flex items-center px-4 gap-4 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-400 uppercase">Tamaño</span>
+            <input
+              type="range"
+              id="brush-size"
+              min="1"
+              max="10"
+              value="1"
+              class="w-24 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <span id="brush-size-val" class="text-xs font-mono w-4">1</span>
+          </div>
+
+          <div class="w-px h-4 bg-slate-200"></div>
+
+          <button
+            id="mirror-mode"
+            class="flex items-center gap-2 px-2 py-1 rounded text-xs font-medium text-slate-600 hover:bg-indigo-50 transition"
+          >
+            <i class="fas fa-arrows-alt-h"></i> Espejo
+          </button>
+
+          <div class="flex-1"></div>
+
+          <div class="flex items-center gap-2">
+            <button
+              onclick="window.app.editor.zoom(-0.1)"
+              class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"
+            >
+              <i class="fas fa-minus text-xs"></i>
+            </button>
+            <span id="zoom-level" class="text-xs font-mono">100%</span>
+            <button
+              onclick="window.app.editor.zoom(0.1)"
+              class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100"
+            >
+              <i class="fas fa-plus text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div
+          id="editor-container"
+          class="flex-1 overflow-auto flex items-center justify-center p-8 relative"
+        >
+          <div class="relative shadow-2xl checkerboard" id="canvas-wrapper">
+            <!-- Canvases injected here -->
+          </div>
+
+          <!-- Drag Overlay -->
+          <div
+            id="drop-zone"
+            class="absolute inset-4 bg-indigo-500/10 border-2 border-dashed border-indigo-500 rounded-xl flex items-center justify-center hidden z-50 backdrop-blur-sm"
+          >
+            <div class="bg-white px-6 py-4 rounded-lg shadow-xl text-indigo-600 font-bold animate-bounce">
+              <i class="fas fa-file-import mr-2"></i> Suelta tu Skin aquí
+            </div>
+          </div>
+
+          <!-- AI Modal (Hidden by default) -->
+          <div
+            id="ai-modal"
+            class="absolute top-4 right-4 w-80 bg-white rounded-xl shadow-2xl border border-purple-100 hidden z-40 flex flex-col overflow-hidden"
+          >
+            <div
+              class="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 flex justify-between items-center text-white"
+            >
+              <h3 class="font-bold text-sm flex items-center gap-2">
+                <i class="fas fa-robot"></i> Asistente Creativo
+              </h3>
+              <button
+                onclick="app.ai.toggleModal()"
+                class="hover:bg-white/20 rounded p-1"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+              <div class="flex gap-2 mb-4 text-xs">
+                <button
+                  onclick="app.ai.setTab('palette')"
+                  id="tab-palette"
+                  class="flex-1 py-1.5 px-3 rounded-md bg-white border border-slate-200 font-medium shadow-sm text-purple-600"
+                >
+                  Paletas
+                </button>
+                <button
+                  onclick="app.ai.setTab('critic')"
+                  id="tab-critic"
+                  class="flex-1 py-1.5 px-3 rounded-md text-slate-500 hover:bg-white hover:shadow-sm transition"
+                >
+                  Análisis
+                </button>
+              </div>
+
+              <!-- Palette Gen -->
+              <div id="panel-palette">
+                <label class="block text-xs font-bold text-slate-500 mb-1"
+                  >Tema de la Skin</label
+                >
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    id="palette-prompt"
+                    placeholder="Ej: Caballero de Hielo, Zombi..."
+                    class="flex-1 text-sm border border-slate-300 rounded p-1.5 focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    onclick="app.ai.generatePalette()"
+                    class="bg-purple-500 hover:bg-purple-600 text-white p-1.5 rounded shadow-sm transition w-8 flex items-center justify-center"
+                  >
+                    <i class="fas fa-arrow-right"></i>
+                  </button>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2">
+                  Gemini generará 6 colores armónicos.
+                </p>
+              </div>
+
+              <!-- Critic -->
+              <div id="panel-critic" class="hidden">
+                <p class="text-xs text-slate-600 mb-3">
+                  Gemini analizará tu textura actual (visual) y te dará consejos de mejora.
+                </p>
+                <button
+                  onclick="app.ai.analyzeSkin()"
+                  class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded text-sm font-medium shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  <i class="fas fa-eye"></i> Analizar Skin Actual
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="ai-results"
+              class="p-4 text-xs text-slate-600 min-h-[100px] max-h-[200px] overflow-y-auto bg-white"
+            >
+              <div class="text-center text-slate-400 mt-4">Los resultados aparecerán aquí...</div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Panel: 3D & Layers -->
+      <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10">
+        <!-- 3D Preview -->
+        <div class="h-[400px] bg-slate-50 relative border-b border-slate-200 group">
+          <div id="viewer-3d" class="absolute inset-0 w-full h-full"></div>
+
+          <!-- 3D Controls Overlay -->
+          <div
+            class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          >
+            <button
+              onclick="app.viewer.resetCamera()"
+              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
+              title="Reset Camera"
+            >
+              <i class="fas fa-compress"></i>
+            </button>
+            <button
+              onclick="app.viewer.toggleGrid()"
+              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
+              title="Toggle Grid"
+            >
+              <i class="fas fa-border-all"></i>
+            </button>
+            <button
+              onclick="app.viewer.toggleSpin()"
+              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-indigo-50 text-slate-600"
+              title="Auto Rotate"
+            >
+              <i class="fas fa-sync"></i>
+            </button>
+          </div>
+
+          <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-white/80 px-2 py-0.5 rounded">
+            3D Preview
+          </div>
+        </div>
+
+        <!-- Layers Panel -->
+        <div class="flex-1 flex flex-col min-h-0">
+          <div class="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <h3 class="text-xs font-bold text-slate-500 uppercase">Capas</h3>
+            <button
+              onclick="window.app.layers.addLayer()"
+              class="text-indigo-600 hover:text-indigo-700 text-xs font-bold flex items-center gap-1"
+            >
+              <i class="fas fa-plus"></i> Nueva
+            </button>
+          </div>
+          <div id="layers-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+            <!-- Layers injected here -->
+          </div>
+        </div>
+
+        <!-- Info Bar -->
+        <div
+          class="p-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between"
+        >
+          <span id="status-msg">Listo</span>
+          <span>256x256px</span>
+        </div>
+      </aside>
+    </div>
+
+    <input type="file" id="file-upload" class="hidden" accept="image/png" />
+
+    <!-- App Script -->
+    <script type="module">
+      import { App } from './js/app.js';
+      window.App = App;
+    </script>
+  </body>
+</html>
