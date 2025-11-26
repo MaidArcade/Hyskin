@@ -23,6 +23,9 @@ export const getInitialState = () => ({
   isDrawing: false,
   mirrorMode: false,
   zoom: 1.0,
+  darkMode: false,
+  selection: null,
+  isPanning: false,
   activeLayerId: 0,
   layerCounter: 0,
   paintOn3D: false,
@@ -48,7 +51,11 @@ export const TOOLS = {
   BRUSH: 'brush',
   ERASER: 'eraser',
   FILL: 'fill',
-  PICKER: 'picker'
+  PICKER: 'picker',
+  SELECT: 'select',
+  MOVE: 'move',
+  ZOOM: 'zoom',
+  HAND: 'hand'
 };
 
 /**
@@ -60,5 +67,11 @@ export const SHORTCUTS = {
   BRUSH: 'b',
   ERASER: 'e',
   FILL: 'f',
-  PICKER: 'p'
+  PICKER: 'p',
+  SELECT: 'm',
+  MOVE: 'v',
+  ZOOM: 'z',
+  HAND: ' ',
+  ZOOM_IN: '+',
+  ZOOM_OUT: '-'
 };

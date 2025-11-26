@@ -5,10 +5,12 @@ export class UIManager {
   constructor(app, config) {
     this.app = app;
     this.config = config;
+    this.previousTool = null;
     this.setupColorPicker();
     this.setupSpectrum();
     this.setupTools();
     this.setupFile();
+    this.setupThemeToggle();
     this.updatePalette(this.app.DEFAULT_PALETTE);
   }
 
@@ -106,6 +108,10 @@ export class UIManager {
     document.getElementById('tool-eraser').onclick = () => setTool('eraser');
     document.getElementById('tool-fill').onclick = () => setTool('fill');
     document.getElementById('tool-picker').onclick = () => setTool('picker');
+    document.getElementById('tool-select').onclick = () => setTool('select');
+    document.getElementById('tool-move').onclick = () => setTool('move');
+    document.getElementById('tool-zoom').onclick = () => setTool('zoom');
+    document.getElementById('tool-hand').onclick = () => setTool('hand');
 
     document.getElementById('brush-size').addEventListener('input', (e) => {
       this.app.state.brushSize = e.target.value;
@@ -136,16 +142,19 @@ export class UIManager {
 
     document.getElementById('swap-views').onclick = () => {
       this.app.state.viewMode = this.app.state.viewMode === '2d' ? '3d' : '2d';
-      document.body.classList.toggle('swap-layout', this.app.state.viewMode === '3d');
+      this.updateViewMode();
     };
 
     document.getElementById('toggle-3d-paint').onclick = (e) => {
       this.app.state.paintOn3D = !this.app.state.paintOn3D;
       e.currentTarget.classList.toggle('bg-indigo-600', this.app.state.paintOn3D);
       e.currentTarget.classList.toggle('text-white', this.app.state.paintOn3D);
+      e.currentTarget.classList.toggle('ring-2', this.app.state.paintOn3D);
+      e.currentTarget.classList.toggle('ring-indigo-200', this.app.state.paintOn3D);
     };
 
     this.setupKeyboardShortcuts();
+    this.updateViewMode();
   }
 
   /**
@@ -169,6 +178,43 @@ export class UIManager {
       } else if (e.key === 'p') {
         this.app.state.tool = 'picker';
         this.updateTools();
+      } else if (e.key === 'm') {
+        this.app.state.tool = 'select';
+        this.updateTools();
+      } else if (e.key === 'v') {
+        this.app.state.tool = 'move';
+        this.updateTools();
+      } else if (e.key === 'z' && !e.ctrlKey) {
+        this.app.state.tool = 'zoom';
+        this.updateTools();
+      } else if (e.key === ' ') {
+        if (!this.app.state.isPanning) {
+          this.previousTool = this.app.state.tool;
+          this.app.state.tool = 'hand';
+        }
+        this.app.state.isPanning = true;
+        this.updateTools();
+      }
+
+      if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        this.app.editor.zoom(this.config.ZOOM_STEP);
+      }
+
+      if (e.ctrlKey && e.key === '-') {
+        e.preventDefault();
+        this.app.editor.zoom(-this.config.ZOOM_STEP);
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === ' ' && this.app.state.tool === 'hand') {
+        this.app.state.isPanning = false;
+        if (this.previousTool) {
+          this.app.state.tool = this.previousTool;
+          this.previousTool = null;
+        }
+        this.updateTools();
       }
     });
   }
@@ -179,6 +225,19 @@ export class UIManager {
   updateTools() {
     document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
     document.getElementById(`tool-${this.app.state.tool}`).classList.add('active');
+  }
+
+  /**
+   * Apply current layout based on view mode
+   */
+  updateViewMode() {
+    const is3D = this.app.state.viewMode === '3d';
+    document.body.classList.toggle('swap-layout', is3D);
+    document.body.classList.toggle('view-3d-only', is3D);
+    const label = document.getElementById('swap-views-label');
+    if (label) {
+      label.innerText = is3D ? 'Ir a 2D' : 'Intercambiar 2D/3D';
+    }
   }
 
   /**
@@ -246,5 +305,29 @@ export class UIManager {
     if (confirm('¿Borrar todo y empezar de nuevo?')) {
       location.reload();
     }
+  }
+
+  /**
+   * Setup theme toggle and respond to dark mode
+   */
+  setupThemeToggle() {
+    const btn = document.getElementById('toggle-theme');
+    if (!btn) return;
+    const apply = () => {
+      document.documentElement.classList.toggle('dark', this.app.state.darkMode);
+      btn.innerHTML = this.app.state.darkMode
+        ? '<i class="fas fa-sun"></i> Claro'
+        : '<i class="fas fa-moon"></i> Oscuro';
+      if (this.app.viewer?.scene) {
+        this.app.viewer.scene.background = new THREE.Color(this.app.state.darkMode ? 0x0f172a : 0xf8fafc);
+      }
+    };
+
+    btn.addEventListener('click', () => {
+      this.app.state.darkMode = !this.app.state.darkMode;
+      apply();
+    });
+
+    apply();
   }
 }
